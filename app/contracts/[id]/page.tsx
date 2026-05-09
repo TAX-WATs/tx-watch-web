@@ -9,6 +9,7 @@ import NetworkBadge from '@/components/NetworkBadge'
 import AlertRuleBadge from '@/components/AlertRuleBadge'
 import WebhookLog from '@/components/WebhookLog'
 import RuleBuilder from '@/components/RuleBuilder'
+import CopyButton from '@/components/CopyButton'
 
 export default function ContractDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -66,6 +67,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
           >
             {truncateId(contract.contract_id, 12)}
           </a>
+          <CopyButton text={contract.contract_id} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
