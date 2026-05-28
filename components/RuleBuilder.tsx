@@ -22,15 +22,32 @@ const emptyRule = (): AlertRule => ({ type: 'AnyTransaction' })
 export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
   const [draft, setDraft] = useState<AlertRule>(emptyRule())
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
 
   function updateDraft(patch: Partial<AlertRule>) {
     setDraft((prev) => ({ ...prev, ...patch }))
     setError(null)
+    setWarning(null)
   }
 
   function handleTypeChange(type: AlertRuleType) {
     setDraft({ type })
     setError(null)
+    setWarning(null)
+  }
+
+  function isDuplicateLabel(newRule: AlertRule): boolean {
+    return rules.some((rule) => {
+      if (newRule.type !== rule.type) return false
+      if (newRule.type === 'LargeTransfer') return newRule.threshold_xlm === rule.threshold_xlm
+      if (newRule.type === 'FunctionCalled') return newRule.function_name === rule.function_name
+      if (newRule.type === 'AdminFunctionCalled') {
+        const newNames = (newRule.function_names ?? []).sort().join(',')
+        const existingNames = (rule.function_names ?? []).sort().join(',')
+        return newNames === existingNames
+      }
+      return true // AnyTransaction and TransactionFailed
+    })
   }
 
   function addRule() {
@@ -52,9 +69,14 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
         return
       }
     }
+    if (isDuplicateLabel(draft)) {
+      setWarning('This rule already exists')
+      return
+    }
     onChange([...rules, draft])
     setDraft(emptyRule())
     setError(null)
+    setWarning(null)
   }
 
   function removeRule(index: number) {
@@ -128,6 +150,7 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
         )}
 
         {error && <p className="text-xs text-red-400">{error}</p>}
+        {warning && <p className="text-xs text-amber-400">{warning}</p>}
 
         <button
           type="button"

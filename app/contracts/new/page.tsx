@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertRule, Network, WatchedContract } from '@/types'
 import { isValidContractId, isValidUrl } from '@/lib/stellar'
-import { saveContract } from '@/lib/storage'
+import { saveContract, getContracts } from '@/lib/storage'
 import { sendTestWebhook } from '@/lib/api'
 import RuleBuilder from '@/components/RuleBuilder'
 
@@ -30,11 +30,22 @@ export default function NewContractPage() {
 
   function validate(): FormErrors {
     const e: FormErrors = {}
-    if (!label.trim()) e.label = 'Label is required'
-    if (!contractId.trim()) e.contract_id = 'Contract ID is required'
-    else if (!isValidContractId(contractId.trim())) e.contract_id = 'Must be a valid Soroban contract address (starts with C, 56 chars)'
-    if (!webhookUrl.trim()) e.webhook_url = 'Webhook URL is required'
-    else if (!isValidUrl(webhookUrl.trim())) e.webhook_url = 'Must be a valid http/https URL'
+    const trimmedLabel = label.trim()
+    const trimmedContractId = contractId.trim()
+    const trimmedWebhookUrl = webhookUrl.trim()
+
+    if (!trimmedLabel) e.label = 'Label is required'
+    if (!trimmedContractId) e.contract_id = 'Contract ID is required'
+    else if (!isValidContractId(trimmedContractId)) e.contract_id = 'Must be a valid Soroban contract address (starts with C, 56 chars)'
+    else {
+      // Check for duplicate contract_id + network combination
+      const isDuplicate = getContracts().some(
+        (c) => c.contract_id === trimmedContractId && c.network === network
+      )
+      if (isDuplicate) e.contract_id = `This contract is already registered on ${network}`
+    }
+    if (!trimmedWebhookUrl) e.webhook_url = 'Webhook URL is required'
+    else if (!isValidUrl(trimmedWebhookUrl)) e.webhook_url = 'Must be a valid http/https URL'
     if (rules.length === 0) e.rules = 'Add at least one alert rule'
     return e
   }
@@ -68,14 +79,15 @@ export default function NewContractPage() {
   }
 
   async function handleTestWebhook() {
-    if (!webhookUrl.trim() || !isValidUrl(webhookUrl.trim())) {
+    const trimmedWebhookUrl = webhookUrl.trim()
+    if (!trimmedWebhookUrl || !isValidUrl(trimmedWebhookUrl)) {
       setErrors((e) => ({ ...e, webhook_url: 'Enter a valid URL to test' }))
       return
     }
     setTestStatus('sending')
     setTestError(null)
     try {
-      await sendTestWebhook(webhookUrl.trim(), contractId.trim() || 'TEST_CONTRACT')
+      await sendTestWebhook(trimmedWebhookUrl, contractId.trim() || 'TEST_CONTRACT')
       setTestStatus('ok')
     } catch (err) {
       setTestStatus('error')
