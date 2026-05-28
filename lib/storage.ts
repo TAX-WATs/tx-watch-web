@@ -78,7 +78,8 @@ export function getContract(id: string): WatchedContract | undefined {
 
 export function saveContract(contract: WatchedContract) {
   const contracts = getContracts().filter((c) => c.id !== contract.id)
-  save(CONTRACTS_KEY, [...contracts, contract])
+  const updated = { ...contract, updated_at: Date.now() }
+  save(CONTRACTS_KEY, [...contracts, updated])
 }
 
 export function deleteContract(id: string) {
