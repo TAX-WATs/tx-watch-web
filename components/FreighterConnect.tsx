@@ -52,6 +52,7 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
 
   function disconnect() {
     setPublicKey(null)
+    setError(null)
   }
 
   if (publicKey) {
@@ -67,6 +68,34 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
         >
           Disconnect
         </button>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className={className}>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+          <p className="text-xs text-red-400">{error}</p>
+          {error === 'Freighter wallet not detected' && (
+            <a
+              href="https://www.freighter.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-red-300 hover:text-red-200 underline mt-2 inline-block"
+            >
+              Install Freighter extension →
+            </a>
+          )}
+          {error === 'Connection rejected' && (
+            <button
+              onClick={() => { setError(null); connect() }}
+              className="text-xs text-red-300 hover:text-red-200 underline mt-2 inline-block"
+            >
+              Try again →
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -91,21 +120,6 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
         )}
         Connect Freighter
       </button>
-      {error && (
-        <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-xs text-red-400">{error}</p>
-          {error === 'Freighter wallet not detected' && (
-            <a
-              href="https://www.freighter.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-red-300 hover:text-red-200 underline mt-2 inline-block"
-            >
-              Install Freighter extension →
-            </a>
-          )}
-        </div>
-      )}
     </div>
   )
 }
