@@ -21,16 +21,26 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
   const [publicKey, setPublicKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    window.freighter?.isConnected().then(async (connected) => {
+    checkConnection()
+  }, [])
+
+  async function checkConnection() {
+    try {
+      if (!window.freighter) return
+      const connected = await window.freighter.isConnected()
       if (connected) {
-        const key = await window.freighter!.getPublicKey()
+        const key = await window.freighter.getPublicKey()
         setPublicKey(key)
+        setIsConnected(true)
         onConnect?.(key)
       }
-    })
-  }, [onConnect])
+    } catch {
+      setIsConnected(false)
+    }
+  }
 
   async function connect() {
     setLoading(true)
@@ -39,13 +49,16 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
       if (!window.freighter) {
         window.open('https://www.freighter.app/', '_blank')
         setError('Freighter not installed — install the extension and reload')
+        setIsConnected(false)
         return
       }
       const key = await window.freighter.getPublicKey()
       setPublicKey(key)
+      setIsConnected(true)
       onConnect?.(key)
     } catch {
       setError('Connection rejected')
+      setIsConnected(false)
     } finally {
       setLoading(false)
     }
@@ -53,6 +66,7 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
 
   function disconnect() {
     setPublicKey(null)
+    setIsConnected(false)
   }
 
   if (publicKey) {

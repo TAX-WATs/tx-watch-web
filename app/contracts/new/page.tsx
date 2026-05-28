@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertRule, Network, WatchedContract } from '@/types'
 import { isValidContractId, isValidUrl } from '@/lib/stellar'
+import { useFreighterConnection } from '@/lib/useFreighterConnection'
 import { saveContract } from '@/lib/storage'
 import { sendTestWebhook } from '@/lib/api'
 import RuleBuilder from '@/components/RuleBuilder'
@@ -19,6 +20,7 @@ interface FormErrors {
 
 export default function NewContractPage() {
   const router = useRouter()
+  const { isConnected } = useFreighterConnection()
   const [label, setLabel] = useState('')
   const [contractId, setContractId] = useState('')
   const [network, setNetwork] = useState<Network>('testnet')
@@ -41,16 +43,11 @@ export default function NewContractPage() {
     return e
   }
 
-  function isWalletConnected(): boolean {
-    // Check if Freighter has a connected key stored in the DOM (set by FreighterConnect)
-    return typeof window !== 'undefined' && !!window.freighter
-  }
-
   async function handleSave() {
     const e = validate()
     if (Object.keys(e).length > 0) { setErrors(e); return }
 
-    if (!isWalletConnected()) {
+    if (!isConnected) {
       setErrors({ wallet: 'Connect your Freighter wallet to save contracts' })
       return
     }
