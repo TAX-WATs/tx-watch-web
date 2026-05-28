@@ -7,6 +7,7 @@ import { isValidContractId, isValidUrl } from '@/lib/stellar'
 import { saveContract } from '@/lib/storage'
 import { sendTestWebhook } from '@/lib/api'
 import RuleBuilder from '@/components/RuleBuilder'
+import Toast from '@/components/Toast'
 
 interface FormErrors {
   label?: string
@@ -27,6 +28,7 @@ export default function NewContractPage() {
   const [saving, setSaving] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
   const [testError, setTestError] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   function validate(): FormErrors {
     const e: FormErrors = {}
@@ -64,7 +66,10 @@ export default function NewContractPage() {
       created_at: Date.now(),
     }
     saveContract(contract)
-    router.push(`/contracts/${contract.id}`)
+    setToast({ message: `Contract "${contract.label}" saved successfully!`, type: 'success' })
+    setTimeout(() => {
+      router.push(`/contracts/${contract.id}`)
+    }, 1500)
   }
 
   async function handleTestWebhook() {
@@ -84,7 +89,9 @@ export default function NewContractPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-zinc-100">Add Contract</h1>
         <p className="text-sm text-zinc-500 mt-1">Register a Soroban contract to monitor</p>
@@ -189,5 +196,6 @@ export default function NewContractPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
