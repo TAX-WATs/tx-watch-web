@@ -72,6 +72,34 @@ types/
   index.ts                  # Shared types (mirrors core Rust structs)
 ```
 
+## Architecture overview
+
+### Page flow
+
+The dashboard follows a standard Next.js App Router structure:
+
+1. **Landing page** (`app/page.tsx`) — unauthenticated entry point with feature overview
+2. **Dashboard** (`app/dashboard/page.tsx`) — authenticated view showing contract stats and grid
+3. **Contract list** (`app/contracts/page.tsx`) — all registered contracts
+4. **Add contract** (`app/contracts/new/page.tsx`) — registration form with Freighter signing
+5. **Contract detail** (`app/contracts/[id]/page.tsx`) — alert rules, webhook logs, and history
+
+### Storage layer
+
+- **localStorage** (`lib/storage.ts`) — persists registered contracts and user preferences
+- **Freighter wallet** — stores user identity and network selection
+- **Backend API** (`lib/api.ts`) — optional txwatch-core integration for webhook delivery logs
+
+### Stellar integration boundaries
+
+The app integrates with Stellar at three points:
+
+1. **Horizon REST API** — fetch account balances, transaction history, and network status
+2. **Soroban RPC** — contract simulation, ledger entry reads, and address validation
+3. **Freighter wallet** — user authentication, transaction signing, and network switching
+
+See [Stellar integration](#stellar-integration) for implementation details.
+
 ## Environment variables
 
 | Variable | Description |
