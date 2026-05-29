@@ -7,6 +7,7 @@ import { isValidContractId, isValidUrl } from '@/lib/stellar'
 import { saveContract, getContracts } from '@/lib/storage'
 import { sendTestWebhook } from '@/lib/api'
 import RuleBuilder from '@/components/RuleBuilder'
+import FreighterConnect from '@/components/FreighterConnect'
 
 interface FormErrors {
   label?: string
@@ -27,6 +28,10 @@ export default function NewContractPage() {
   const [saving, setSaving] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
   const [testError, setTestError] = useState<string | null>(null)
+
+  function handleWalletConnect() {
+    setErrors((prev) => ({ ...prev, wallet: undefined }))
+  }
 
   function validate(): FormErrors {
     const e: FormErrors = {}
@@ -193,6 +198,12 @@ export default function NewContractPage() {
           <label className="block text-sm font-medium text-zinc-300 mb-1.5">Alert Rules</label>
           <RuleBuilder rules={rules} onChange={setRules} />
           {errors.rules && <p className="mt-1 text-xs text-red-400">{errors.rules}</p>}
+        </div>
+
+        {/* Wallet Connection */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Wallet</label>
+          <FreighterConnect onConnect={handleWalletConnect} />
         </div>
 
         {errors.wallet && (
