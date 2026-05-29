@@ -12,6 +12,14 @@ const RULE_TYPES: AlertRuleType[] = [
   'TransactionFailed',
 ]
 
+const RULE_EXAMPLES: Record<AlertRuleType, string> = {
+  'AnyTransaction': 'Alert on every transaction',
+  'LargeTransfer': 'Alert when transfer amount exceeds threshold',
+  'FunctionCalled': 'Alert when a specific function is called',
+  'AdminFunctionCalled': 'Alert when admin functions are called',
+  'TransactionFailed': 'Alert on failed transactions',
+}
+
 interface RuleBuilderProps {
   rules: AlertRule[]
   onChange: (rules: AlertRule[]) => void
@@ -19,19 +27,45 @@ interface RuleBuilderProps {
 
 const emptyRule = (): AlertRule => ({ type: 'AnyTransaction' })
 
+function rulesEqual(a: AlertRule, b: AlertRule): boolean {
+  if (a.type !== b.type) return false
+  if (a.threshold_xlm !== b.threshold_xlm) return false
+  if (a.function_name !== b.function_name) return false
+  if (!a.function_names && !b.function_names) return true
+  if (!a.function_names || !b.function_names) return false
+  return a.function_names.length === b.function_names.length &&
+    a.function_names.every((f, i) => f === b.function_names![i])
+}
+
 export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
   const [draft, setDraft] = useState<AlertRule>(emptyRule())
   const [error, setError] = useState<string | null>(null)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
 
   function updateDraft(patch: Partial<AlertRule>) {
     setDraft((prev) => ({ ...prev, ...patch }))
     setError(null)
+    setWarning(null)
   }
 
   function handleTypeChange(type: AlertRuleType) {
     setDraft({ type })
     setError(null)
+    setWarning(null)
+  }
+
+  function isDuplicateLabel(newRule: AlertRule): boolean {
+    return rules.some((rule) => {
+      if (newRule.type !== rule.type) return false
+      if (newRule.type === 'LargeTransfer') return newRule.threshold_xlm === rule.threshold_xlm
+      if (newRule.type === 'FunctionCalled') return newRule.function_name === rule.function_name
+      if (newRule.type === 'AdminFunctionCalled') {
+        const newNames = (newRule.function_names ?? []).sort().join(',')
+        const existingNames = (rule.function_names ?? []).sort().join(',')
+        return newNames === existingNames
+      }
+      return true // AnyTransaction and TransactionFailed
+    })
   }
 
   function isValidFunctionName(name: string): boolean {
@@ -40,8 +74,12 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
 
   function addRule() {
     if (draft.type === 'LargeTransfer') {
-      if (!draft.threshold_xlm || draft.threshold_xlm <= 0) {
-        setError('Enter a positive XLM threshold')
+      if (draft.threshold_xlm === undefined || draft.threshold_xlm === null || isNaN(draft.threshold_xlm)) {
+        setError('Enter a valid XLM threshold')
+        return
+      }
+      if (draft.threshold_xlm <= 0) {
+        setError('Threshold must be greater than 0')
         return
       }
     }
@@ -60,24 +98,16 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
         setError('Enter at least one function name')
         return
       }
-      for (const name of draft.function_names) {
-        if (!isValidFunctionName(name)) {
-          setError(`Invalid function name "${name}": must start with a letter or underscore, contain only alphanumeric characters and underscores`)
-          return
-        }
-      }
+      // Sort function names for consistency
+      draft.function_names = [...draft.function_names].sort()
     }
-    
-    if (editingIndex !== null) {
-      const updated = [...rules]
-      updated[editingIndex] = draft
-      onChange(updated)
-      setEditingIndex(null)
-    } else {
-      onChange([...rules, draft])
+    if (isDuplicateLabel(draft)) {
+      setWarning('This rule already exists')
+      return
     }
     setDraft(emptyRule())
     setError(null)
+    setWarning(null)
   }
 
   function startEdit(index: number) {
@@ -110,6 +140,7 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
+          <p className="text-xs text-zinc-500 mt-1">{RULE_EXAMPLES[draft.type]}</p>
         </div>
 
         {draft.type === 'LargeTransfer' && (
@@ -163,6 +194,7 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
         )}
 
         {error && <p className="text-xs text-red-400">{error}</p>}
+        {warning && <p className="text-xs text-amber-400">{warning}</p>}
 
         <div className="flex gap-2">
           <button
@@ -194,7 +226,7 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <AlertRuleBadge type={rule.type} />
                 {rule.threshold_xlm !== undefined && (
-                  <span className="text-xs text-zinc-400">≥ {rule.threshold_xlm} XLM</span>
+                  <span className="text-xs text-zinc-400">&gt;= {rule.threshold_xlm} XLM</span>
                 )}
                 {rule.function_name && (
                   <span className="text-xs font-mono text-zinc-400">{rule.function_name}</span>
