@@ -6,6 +6,7 @@ import { AlertRule, Network, WatchedContract } from '@/types'
 import { isValidContractId, isValidUrl } from '@/lib/stellar'
 import { saveContract, getContracts } from '@/lib/storage'
 import { sendTestWebhook } from '@/lib/api'
+import { useWallet } from '@/lib/useWallet'
 import RuleBuilder from '@/components/RuleBuilder'
 import FreighterConnect from '@/components/FreighterConnect'
 
@@ -71,8 +72,7 @@ export default function NewContractPage() {
   }
 
   function isWalletConnected(): boolean {
-    // Check if Freighter has a connected key stored in the DOM (set by FreighterConnect)
-    return typeof window !== 'undefined' && !!window.freighter
+    return isConnected && !!publicKey
   }
 
   async function checkNetworkMismatch(selectedNetwork: Network) {
