@@ -16,7 +16,6 @@ declare global {
 const WALLET_STORAGE_KEY = 'freighter_public_key'
 
 interface FreighterConnectProps {
-  onConnect?: (publicKey: string) => void
   className?: string
 }
 
