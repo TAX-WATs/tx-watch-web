@@ -1,34 +1,106 @@
 'use client'
 
-import { useFreighter } from '@/lib/useFreighter'
+import { useState, useEffect } from 'react'
+
+declare global {
+  interface Window {
+    freighter?: {
+      isConnected: () => Promise<boolean>
+      getPublicKey: () => Promise<string>
+      getNetwork: () => Promise<string>
+    }
+    __freighterPublicKey?: string | null
+  }
+}
+
+const WALLET_STORAGE_KEY = 'freighter_public_key'
 
 interface FreighterConnectProps {
   className?: string
 }
 
-export default function FreighterConnect({ className = '' }: FreighterConnectProps) {
-  const { publicKey, network, loading, error, connect, disconnect } = useFreighter()
+export default function FreighterConnect({ onConnect, className = '' }: FreighterConnectProps) {
+  const [publicKey, setPublicKey] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+
+  useEffect(() => {
+    checkConnection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function checkConnection() {
+    try {
+      if (!window.freighter) return
+      const connected = await window.freighter.isConnected()
+      if (connected) {
+        const key = await window.freighter.getPublicKey()
+        setPublicKey(key)
+        window.__freighterPublicKey = key
+        onConnect?.(key)
+      }
+    } catch {
+      // Connection check failed
+    }
+  }
+
+  async function connect() {
+    if (isConnecting) return
+    setIsConnecting(true)
+    setLoading(true)
+    setError(null)
+    try {
+      if (!window.freighter) {
+        window.open('https://www.freighter.app/', '_blank')
+        setError('Freighter not installed - install the extension and reload')
+        return
+      }
+      const key = await window.freighter.getPublicKey()
+      const network = await window.freighter.getNetwork()
+      if (!key || !network) {
+        setError('Failed to retrieve wallet information')
+        return
+      }
+      setPublicKey(key)
+      localStorage.setItem(WALLET_STORAGE_KEY, key)
+      onConnect?.(key)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Connection rejected'
+      setError(message)
+    } finally {
+      setLoading(false)
+      setIsConnecting(false)
+    }
+  }
+
+  function disconnect() {
+    setPublicKey(null)
+    localStorage.removeItem(WALLET_STORAGE_KEY)
+  }
 
   if (publicKey) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-        <div className="flex flex-col gap-0.5">
-          <span className="text-sm text-zinc-300 font-mono">
-            {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
-          </span>
-          {network && (
-            <span className="text-xs text-zinc-500 capitalize">
-              {network.toLowerCase()}
-            </span>
-          )}
-        </div>
+        <span className="text-sm text-zinc-300 font-mono">
+          {publicKey.slice(0, 4)}...{publicKey.slice(-4)}
+        </span>
         <button
           onClick={disconnect}
           className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           Disconnect
         </button>
+      </div>
+    )
+  }
+
+  if (isInitializing) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <div className="w-24 h-9 rounded-lg bg-zinc-800 animate-pulse" />
       </div>
     )
   }
@@ -53,7 +125,6 @@ export default function FreighterConnect({ className = '' }: FreighterConnectPro
         )}
         Connect Freighter
       </button>
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
     </div>
   )
 }
