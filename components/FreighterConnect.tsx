@@ -13,6 +13,8 @@ declare global {
   }
 }
 
+const WALLET_STORAGE_KEY = 'freighter_public_key'
+
 interface FreighterConnectProps {
   onConnect?: (publicKey: string) => void
   className?: string
@@ -22,41 +24,61 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
   const [publicKey, setPublicKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
-    window.freighter?.isConnected().then(async (connected) => {
+    checkConnection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function checkConnection() {
+    try {
+      if (!window.freighter) return
+      const connected = await window.freighter.isConnected()
       if (connected) {
-        const key = await window.freighter!.getPublicKey()
+        const key = await window.freighter.getPublicKey()
         setPublicKey(key)
         window.__freighterPublicKey = key
         onConnect?.(key)
       }
-    })
-  }, [onConnect])
+    } catch {
+      // Connection check failed
+    }
+  }
 
   async function connect() {
+    if (isConnecting) return
+    setIsConnecting(true)
     setLoading(true)
     setError(null)
     try {
       if (!window.freighter) {
-        setError('Freighter wallet not detected')
+        window.open('https://www.freighter.app/', '_blank')
+        setError('Freighter not installed - install the extension and reload')
         return
       }
       const key = await window.freighter.getPublicKey()
+      const network = await window.freighter.getNetwork()
+      if (!key || !network) {
+        setError('Failed to retrieve wallet information')
+        return
+      }
       setPublicKey(key)
-      window.__freighterPublicKey = key
+      localStorage.setItem(WALLET_STORAGE_KEY, key)
       onConnect?.(key)
-    } catch {
-      setError('Connection rejected')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Connection rejected'
+      setError(message)
     } finally {
       setLoading(false)
+      setIsConnecting(false)
     }
   }
 
   function disconnect() {
     setPublicKey(null)
-    window.__freighterPublicKey = null
-    setError(null)
+    localStorage.removeItem(WALLET_STORAGE_KEY)
   }
 
   if (publicKey) {
@@ -64,7 +86,7 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
       <div className={`flex items-center gap-2 ${className}`}>
         <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
         <span className="text-sm text-zinc-300 font-mono">
-          {publicKey.slice(0, 4)}…{publicKey.slice(-4)}
+          {publicKey.slice(0, 4)}...{publicKey.slice(-4)}
         </span>
         <button
           onClick={disconnect}
@@ -76,30 +98,10 @@ export default function FreighterConnect({ onConnect, className = '' }: Freighte
     )
   }
 
-  if (error) {
+  if (isInitializing) {
     return (
-      <div className={className}>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-xs text-red-400">{error}</p>
-          {error === 'Freighter wallet not detected' && (
-            <a
-              href="https://www.freighter.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-red-300 hover:text-red-200 underline mt-2 inline-block"
-            >
-              Install Freighter extension →
-            </a>
-          )}
-          {error === 'Connection rejected' && (
-            <button
-              onClick={() => { setError(null); connect() }}
-              className="text-xs text-red-300 hover:text-red-200 underline mt-2 inline-block"
-            >
-              Try again →
-            </button>
-          )}
-        </div>
+      <div className={`flex items-center gap-2 ${className}`}>
+        <div className="w-24 h-9 rounded-lg bg-zinc-800 animate-pulse" />
       </div>
     )
   }
