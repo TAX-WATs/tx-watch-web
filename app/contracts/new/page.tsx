@@ -31,6 +31,7 @@ export default function NewContractPage() {
   const [saving, setSaving] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
   const [testError, setTestError] = useState<string | null>(null)
+  const [testStatusCode, setTestStatusCode] = useState<number | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const testAbortRef = useRef<AbortController | null>(null)
 
@@ -137,9 +138,16 @@ export default function NewContractPage() {
     testAbortRef.current = controller
     setTestStatus('sending')
     setTestError(null)
+    setTestStatusCode(null)
     try {
-      await sendTestWebhook(trimmedWebhookUrl, contractId.trim() || 'TEST_CONTRACT', controller.signal)
-      setTestStatus('ok')
+      const { status, ok } = await sendTestWebhook(trimmedWebhookUrl, contractId.trim() || 'TEST_CONTRACT', controller.signal)
+      setTestStatusCode(status)
+      if (ok) {
+        setTestStatus('ok')
+      } else {
+        setTestStatus('error')
+        setTestError(`Server responded with ${status}`)
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
       setTestStatus('error')
@@ -221,7 +229,7 @@ export default function NewContractPage() {
               type="url"
               placeholder="https://your-server.com/webhook"
               value={webhookUrl}
-              onChange={(e) => { setWebhookUrl(e.target.value); setErrors((prev) => ({ ...prev, webhook_url: undefined })); setTestStatus('idle') }}
+              onChange={(e) => { setWebhookUrl(e.target.value); setErrors((prev) => ({ ...prev, webhook_url: undefined })); setTestStatus('idle'); setTestStatusCode(null) }}
               className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition-colors"
             />
             <button
@@ -230,13 +238,13 @@ export default function NewContractPage() {
               disabled={testStatus === 'sending'}
               className="px-3 py-2.5 rounded-lg border border-zinc-700 hover:border-zinc-500 text-sm text-zinc-300 hover:text-zinc-100 transition-colors disabled:opacity-50 whitespace-nowrap"
             >
-              {testStatus === 'sending' ? 'Sending...' : testStatus === 'ok' ? '[OK] Sent' : testStatus === 'error' ? '[FAIL] Failed' : 'Test'}
+              {testStatus === 'sending' ? 'Sending…' : testStatus === 'ok' ? `${testStatusCode} OK` : testStatus === 'error' ? `${testStatusCode ?? 'ERR'} Failed` : 'Test'}
             </button>
           </div>
           <p className="mt-1.5 text-xs text-zinc-400">HTTP and HTTPS are supported. Example: <span className="font-mono">https://api.example.com/alerts</span></p>
           {errors.webhook_url && <p className="mt-1 text-xs text-red-400">{errors.webhook_url}</p>}
           {testStatus === 'error' && testError && <p className="mt-1 text-xs text-red-400">{testError}</p>}
-          {testStatus === 'ok' && <p className="mt-1 text-xs text-emerald-400">Test payload delivered successfully</p>}
+          {testStatus === 'ok' && <p className="mt-1 text-xs text-emerald-400">Test payload delivered — {testStatusCode} received</p>}
         </div>
 
         {/* Alert Rules */}

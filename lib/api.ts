@@ -19,7 +19,7 @@ export async function sendTestWebhook(
   webhookUrl: string,
   contractId: string,
   signal?: AbortSignal
-): Promise<void> {
+): Promise<{ status: number; ok: boolean }> {
   const payload = {
     label: 'Test Alert',
     contract_id: contractId,
@@ -35,5 +35,5 @@ export async function sendTestWebhook(
     body: JSON.stringify(payload),
     signal,
   })
-  if (!res.ok) throw new Error(`Webhook returned ${res.status}`)
+  return { status: res.status, ok: res.ok }
 }
