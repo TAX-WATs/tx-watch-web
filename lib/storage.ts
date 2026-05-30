@@ -15,6 +15,7 @@ function load<T>(key: string): T[] {
 }
 
 const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 // 5MB typical limit
+const MAX_ALERTS_PER_CONTRACT = 500
 const ALERTS_RETENTION_DAYS = 90
 
 function getStorageSize(): number {
@@ -109,8 +110,12 @@ export function getAlerts(contractId: string): AlertPayload[] {
 }
 
 export function addAlert(alert: AlertPayload) {
-  const alerts = load<AlertPayload>(ALERTS_KEY)
-  save(ALERTS_KEY, [alert, ...alerts])
+  const all = [alert, ...load<AlertPayload>(ALERTS_KEY)]
+  const counts: Record<string, number> = {}
+  save(ALERTS_KEY, all.filter((a) => {
+    counts[a.contract_id] = (counts[a.contract_id] ?? 0) + 1
+    return counts[a.contract_id] <= MAX_ALERTS_PER_CONTRACT
+  }))
 }
 
 export function deleteAlertsByContractId(contractId: string) {
