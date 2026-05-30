@@ -102,6 +102,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <p className="text-xs text-zinc-500 mb-1">Registered</p>
           <p className="text-sm text-zinc-300">{formatDate(contract.created_at)}</p>
+          <p className="text-xs text-zinc-500 mt-1">{new Date(contract.created_at).toLocaleTimeString()}</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <p className="text-xs text-zinc-500 mb-1">Total Alerts</p>
