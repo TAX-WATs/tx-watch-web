@@ -85,7 +85,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
           </div>
           <h2 className="text-xl font-semibold text-zinc-100">Contract Not Found</h2>
           <p className="text-sm text-zinc-400">
-            The contract you're looking for doesn't exist or has been deleted.
+            The contract you&apos;re looking for doesn&apos;t exist or has been deleted.
           </p>
           <button
             onClick={() => router.push('/contracts')}
