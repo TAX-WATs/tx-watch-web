@@ -23,6 +23,9 @@ const RULE_EXAMPLES: Record<AlertRuleType, string> = {
 interface RuleBuilderProps {
   rules: AlertRule[]
   onChange: (rules: AlertRule[]) => void
+  /** Optional callback fired whenever a rule is added, updated, or removed.
+   *  Intended as an analytics hook point — no behavior depends on it. */
+  onRulesChanged?: (rules: AlertRule[], action: 'add' | 'update' | 'remove') => void
 }
 
 const emptyRule = (): AlertRule => ({ type: 'AnyTransaction' })
@@ -37,8 +40,9 @@ function rulesEqual(a: AlertRule, b: AlertRule): boolean {
     a.function_names.every((f, i) => f === b.function_names![i])
 }
 
-export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
+export default function RuleBuilder({ rules, onChange, onRulesChanged }: RuleBuilderProps) {
   const [draft, setDraft] = useState<AlertRule>(emptyRule())
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
 
@@ -105,6 +109,16 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
       setWarning('This rule already exists')
       return
     }
+    if (editingIndex !== null) {
+      const updated = rules.map((r, i) => (i === editingIndex ? draft : r))
+      onChange(updated)
+      onRulesChanged?.(updated, 'update')
+      setEditingIndex(null)
+    } else {
+      const updated = [...rules, draft]
+      onChange(updated)
+      onRulesChanged?.(updated, 'add')
+    }
     setDraft(emptyRule())
     setError(null)
     setWarning(null)
@@ -123,7 +137,9 @@ export default function RuleBuilder({ rules, onChange }: RuleBuilderProps) {
   }
 
   function removeRule(index: number) {
-    onChange(rules.filter((_, i) => i !== index))
+    const updated = rules.filter((_, i) => i !== index)
+    onChange(updated)
+    onRulesChanged?.(updated, 'remove')
   }
 
   return (
