@@ -21,6 +21,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
   const [showEditRules, setShowEditRules] = useState(false)
   const [editedRules, setEditedRules] = useState<AlertRule[]>([])
   const [rulesError, setRulesError] = useState<string | null>(null)
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false)
 
   useEffect(() => {
     const c = getContract(params.id)
@@ -46,6 +47,23 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
     const updated = { ...contract!, rules: editedRules }
     saveContract(updated)
     setContract(updated)
+    setShowEditRules(false)
+  }
+
+  function hasUnsavedChanges(): boolean {
+    return JSON.stringify(editedRules) !== JSON.stringify(contract?.rules ?? [])
+  }
+
+  function handleCancelEdit() {
+    if (hasUnsavedChanges()) {
+      setShowUnsavedWarning(true)
+    } else {
+      setShowEditRules(false)
+    }
+  }
+
+  function confirmDiscard() {
+    setShowUnsavedWarning(false)
     setShowEditRules(false)
   }
 
@@ -170,10 +188,36 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
                 Save Rules
               </button>
               <button
-                onClick={() => setShowEditRules(false)}
+                onClick={handleCancelEdit}
                 className="flex-1 px-4 py-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-sm text-zinc-300 hover:text-zinc-100 transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Warning Modal */}
+      {showUnsavedWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-lg font-semibold text-zinc-100">Discard Changes?</h3>
+            <p className="text-sm text-zinc-400">
+              You have unsaved changes to your alert rules. Are you sure you want to discard them?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmDiscard}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-medium text-white transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => setShowUnsavedWarning(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-zinc-700 hover:border-zinc-500 text-sm text-zinc-300 hover:text-zinc-100 transition-colors"
+              >
+                Keep Editing
               </button>
             </div>
           </div>
