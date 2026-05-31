@@ -90,15 +90,30 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <p className="text-xs text-zinc-500 mb-1">Webhook URL</p>
-          <p className="text-sm text-zinc-300 break-all">{contract.webhook_url}</p>
+          <a
+            href={contract.webhook_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors break-all"
+          >
+            {contract.webhook_url}
+          </a>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <p className="text-xs text-zinc-500 mb-1">Registered</p>
           <p className="text-sm text-zinc-300">{formatDate(contract.created_at)}</p>
+          <p className="text-xs text-zinc-500 mt-1">{new Date(contract.created_at).toLocaleTimeString()}</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-xs text-zinc-500 mb-1">Total Alerts</p>
-          <p className="text-sm text-zinc-300">{alerts.length}</p>
+          <p className="text-xs text-zinc-500 mb-1">{alerts.length === 0 ? 'Total Alerts' : 'Last Alert'}</p>
+          {alerts.length === 0 ? (
+            <p className="text-sm text-zinc-300">No alerts yet</p>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-300">{formatDate(alerts[0].timestamp)}</p>
+              <p className="text-xs text-zinc-500 mt-1">{new Date(alerts[0].timestamp).toLocaleTimeString()}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -140,9 +155,18 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full space-y-4">
             <h3 className="text-lg font-semibold text-zinc-100">Delete Contract?</h3>
-            <p className="text-sm text-zinc-400">
-              This will permanently remove <span className="text-zinc-200 font-medium">{contract.label}</span> and all its alert history. This cannot be undone.
-            </p>
+            <div className="space-y-2 text-sm text-zinc-400">
+              <p>
+                This will permanently remove <span className="text-zinc-200 font-medium">{contract.label}</span> and cannot be undone.
+              </p>
+              <p className="text-xs text-zinc-500">
+                Deleted data:
+              </p>
+              <ul className="text-xs text-zinc-500 list-disc list-inside space-y-1">
+                <li>Contract configuration and alert rules</li>
+                <li>All {alerts.length} alert {alerts.length === 1 ? 'record' : 'records'}</li>
+              </ul>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={handleDelete}
