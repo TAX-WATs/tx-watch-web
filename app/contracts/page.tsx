@@ -8,6 +8,8 @@ import ContractCard from '@/components/ContractCard'
 import EmptyState from '@/components/EmptyState'
 
 type ViewMode = 'flat' | 'grouped'
+type NetworkFilter = 'all' | Network
+type SortOption = 'newest' | 'oldest' | 'label' | 'recent-alert'
 
 const NETWORK_LABELS: Record<Network, string> = {
   mainnet: 'Mainnet',
@@ -15,24 +17,64 @@ const NETWORK_LABELS: Record<Network, string> = {
   futurenet: 'Futurenet',
 }
 
+const NETWORK_FILTERS: { value: NetworkFilter; label: string }[] = [
+  { value: 'all', label: 'All Networks' },
+  { value: 'mainnet', label: 'Mainnet' },
+  { value: 'testnet', label: 'Testnet' },
+  { value: 'futurenet', label: 'Futurenet' },
+]
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'label', label: 'Label (A-Z)' },
+  { value: 'recent-alert', label: 'Recent Alert' },
+]
+
 export default function ContractsPage() {
-  const [contracts, setContracts] = useState<WatchedContract[]>([])
+  const [allContracts, setAllContracts] = useState<WatchedContract[]>([])
   const [networkFilter, setNetworkFilter] = useState<NetworkFilter>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [mounted, setMounted] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('flat')
 
   useEffect(() => {
     const all = getContracts()
-    if (filter === 'webhooks') {
-      setContracts(all.filter((c) => c.webhook_url))
-    } else if (filter === 'alerts') {
-      const todayStart = new Date().setHours(0, 0, 0, 0)
-      setContracts(all.filter((c) => getAlerts(c.contract_id).some((a) => a.timestamp >= todayStart)))
-    } else {
-      setContracts(all)
-    }
+    setAllContracts(all)
     setMounted(true)
-  }, [filter])
+  }, [])
+
+  const filtered = useMemo(() => {
+    if (networkFilter === 'all') {
+      return allContracts
+    }
+    return allContracts.filter((c) => c.network === networkFilter)
+  }, [allContracts, networkFilter])
+
+  const sorted = useMemo(() => {
+    const contractsWithAlerts = filtered.map((c) => {
+      const alerts = getAlerts(c.id)
+      const lastAlertTime = alerts.length > 0 ? alerts[0]?.timestamp : 0
+      return { contract: c, lastAlertTime }
+    })
+
+    const sortedWithAlerts = [...contractsWithAlerts].sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return b.contract.created_at - a.contract.created_at
+        case 'oldest':
+          return a.contract.created_at - b.contract.created_at
+        case 'label':
+          return a.contract.label.toLowerCase().localeCompare(b.contract.label.toLowerCase())
+        case 'recent-alert':
+          return b.lastAlertTime - a.lastAlertTime
+        default:
+          return 0
+      }
+    })
+
+    return sortedWithAlerts.map((item) => item.contract)
+  }, [filtered, sortBy])
 
   const grouped = useMemo(() => {
     const groups: Record<Network, WatchedContract[]> = {
@@ -40,17 +82,18 @@ export default function ContractsPage() {
       testnet: [],
       futurenet: [],
     }
-    for (const c of contracts) {
+    for (const c of sorted) {
       if (groups[c.network]) {
         groups[c.network].push(c)
       }
     }
     return groups
-  }, [contracts])
+  }, [sorted])
 
   if (!mounted) return null
 
-  const filterLabel = filter === 'webhooks' ? 'with active webhooks' : filter === 'alerts' ? 'with alerts today' : null
+  const hasAnyContracts = allContracts.length > 0
+  const hasFilteredContracts = filtered.length > 0
 
   return (
     <div className="space-y-6">
@@ -58,34 +101,60 @@ export default function ContractsPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Contracts</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            {contracts.length} {filterLabel ?? 'registered'}
-            {filterLabel && <Link href="/contracts" className="ml-2 text-indigo-400 hover:text-indigo-300">clear filter</Link>}
+            {filtered.length} registered
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Sort dropdown */}
+          {hasAnyContracts && (
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="appearance-none px-3 py-2 pr-8 rounded-lg bg-zinc-800 border border-zinc-700 text-sm font-medium text-zinc-200 hover:bg-zinc-750 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors cursor-pointer"
+                aria-label="Sort contracts"
+              >
+                {SORT_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <svg
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          )}
           {/* View mode toggle */}
-          <div className="flex items-center rounded-lg bg-zinc-800 border border-zinc-700 p-0.5">
-            <button
-              onClick={() => setViewMode('flat')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                viewMode === 'flat'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              Flat
-            </button>
-            <button
-              onClick={() => setViewMode('grouped')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                viewMode === 'grouped'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              By Network
-            </button>
-          </div>
+          {hasAnyContracts && (
+            <div className="flex items-center rounded-lg bg-zinc-800 border border-zinc-700 p-0.5">
+              <button
+                onClick={() => setViewMode('flat')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  viewMode === 'flat'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Flat
+              </button>
+              <button
+                onClick={() => setViewMode('grouped')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  viewMode === 'grouped'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                By Network
+              </button>
+            </div>
+          )}
           <Link
             href="/contracts/new"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white transition-colors"
@@ -99,35 +168,37 @@ export default function ContractsPage() {
       </div>
 
       {/* Network filter tabs */}
-      <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg w-fit" role="group" aria-label="Filter by network">
-        {NETWORK_FILTERS.map(({ value, label }) => {
-          const count = value === 'all' ? contracts.length : contracts.filter((c) => c.network === value).length
-          const isActive = networkFilter === value
-          return (
-            <button
-              key={value}
-              onClick={() => setNetworkFilter(value)}
-              aria-pressed={isActive}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-              }`}
-            >
-              {label}
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-indigo-500 text-indigo-100' : 'bg-zinc-800 text-zinc-500'
+      {hasAnyContracts && (
+        <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg w-fit" role="group" aria-label="Filter by network">
+          {NETWORK_FILTERS.map(({ value, label }) => {
+            const count = value === 'all' ? allContracts.length : allContracts.filter((c) => c.network === value).length
+            const isActive = networkFilter === value
+            return (
+              <button
+                key={value}
+                onClick={() => setNetworkFilter(value)}
+                aria-pressed={isActive}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
                 }`}
               >
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+                {label}
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    isActive ? 'bg-indigo-500 text-indigo-100' : 'bg-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-      {contracts.length === 0 ? (
+      {!hasAnyContracts ? (
         <EmptyState
           title="No contracts yet"
           description="Register a Soroban contract to begin monitoring transactions and configuring alert rules."
@@ -138,6 +209,19 @@ export default function ContractsPage() {
             >
               Add Contract
             </Link>
+          }
+        />
+      ) : !hasFilteredContracts ? (
+        <EmptyState
+          title="No contracts found"
+          description={`No contracts match the current filter. Try selecting a different network or clear the filter to see all contracts.`}
+          action={
+            <button
+              onClick={() => setNetworkFilter('all')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-medium text-white transition-colors"
+            >
+              Clear Filter
+            </button>
           }
         />
       ) : viewMode === 'grouped' ? (
@@ -169,7 +253,7 @@ export default function ContractsPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((c) => (
+          {sorted.map((c) => (
             <ContractCard
               key={c.id}
               contract={c}
