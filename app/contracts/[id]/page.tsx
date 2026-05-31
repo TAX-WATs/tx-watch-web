@@ -6,6 +6,7 @@ import { WatchedContract, AlertPayload, AlertRule } from '@/types'
 import { getContract, deleteContract, getAlerts, saveContract } from '@/lib/storage'
 import { truncateId, explorerContractUrl } from '@/lib/stellar'
 import { formatDate, formatRuleSummary } from '@/lib/format'
+import { useAnalytics } from '@/lib/useAnalytics'
 import NetworkBadge from '@/components/NetworkBadge'
 import AlertRuleBadge from '@/components/AlertRuleBadge'
 import WebhookLog from '@/components/WebhookLog'
@@ -145,7 +146,10 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
       {/* Metadata */}
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-xs text-zinc-500 mb-1">Webhook URL</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-zinc-500">Webhook URL</p>
+            <CopyButton text={contract.webhook_url} />
+          </div>
           <a
             href={contract.webhook_url}
             target="_blank"
