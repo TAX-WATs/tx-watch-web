@@ -1,10 +1,10 @@
-# stellar-txwatch-web
+# tx-watch-web
 
 Web dashboard for Stellar TxWatch - register contracts and manage real-time alert rules.
 
-Part of the [Tx-wat](https://github.com/Tx-wat) GitHub org.
+Part of the [TAX-WATs](https://github.com/TAX-WATs) GitHub org.
 
-[![CI](https://github.com/Tx-wat/stellar-txwatch-web/actions/workflows/ci.yml/badge.svg)](https://github.com/Tx-wat/stellar-txwatch-web/actions/workflows/ci.yml)
+[![CI](https://github.com/TAX-WATs/tx-watch-web/actions/workflows/ci.yml/badge.svg)](https://github.com/TAX-WATs/tx-watch-web/actions/workflows/ci.yml)
 
 ## What it does
 
@@ -26,8 +26,8 @@ Part of the [Tx-wat](https://github.com/Tx-wat) GitHub org.
 ## Getting started
 
 ```bash
-git clone https://github.com/Tx-wat/stellar-txwatch-web
-cd stellar-txwatch-web
+git clone https://github.com/TAX-WATs/tx-watch-web
+cd tx-watch-web
 npm install
 cp .env.example .env.local
 npm run dev
@@ -222,7 +222,7 @@ explorerContractUrl('mainnet', contractId) // https://stellar.expert/explorer/pu
 
 ### Extending alert rules
 
-Alert rules are defined in `types/index.ts` and must stay in sync with the Rust structs in [`stellar-txwatch-core`](https://github.com/Tx-wat/stellar-txwatch-core). To add a new rule type:
+Alert rules are defined in `types/index.ts` and must stay in sync with the Rust structs in [`tx-watch-core`](https://github.com/TAX-WATs/tx-watch-core). To add a new rule type:
 
 1. Add the variant to `AlertRuleType` in `types/index.ts`
 2. Add a label and colour to `AlertRuleBadge.tsx`
@@ -281,8 +281,8 @@ See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 ## Sister repos
 
-- [stellar-txwatch-core](https://github.com/Tx-wat/stellar-txwatch-core) - Rust monitoring engine
-- [stellar-txwatch-contracts](https://github.com/Tx-wat/stellar-txwatch-contracts) - Soroban smart contracts
+- [tx-watch-core](https://github.com/TAX-WATs/tx-watch-core) - Rust monitoring engine
+- [tx-watch-contracts](https://github.com/TAX-WATs/tx-watch-contracts) - Soroban smart contracts
 
 ## Data Persistence
 
@@ -307,7 +307,7 @@ The dashboard currently operates in two modes:
 ### API Mode (When `NEXT_PUBLIC_API_URL` is set)
 - Contracts and rules sync with the txwatch-core backend
 - Real webhook delivery and monitoring depend on the backend service
-- Requires the [stellar-txwatch-core](https://github.com/Tx-wat/stellar-txwatch-core) API running
+- Requires the [tx-watch-core](https://github.com/TAX-WATs/tx-watch-core) API running
 
 **Note:** The dashboard itself does not monitor transactions. Monitoring is performed by the core engine. The dashboard is a configuration and monitoring UI only.
 
